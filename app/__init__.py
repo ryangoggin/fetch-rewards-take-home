@@ -27,12 +27,13 @@ def generate_id():
 
     return id
 
-# for testing purposes
+# route for testing purposes to view all processed receipts
 @app.route('/receipts/all')
 def all_receipts():
     print(receipts)
     return receipts
 
+# route for getting a receipt's points by id
 @app.route('/receipts/<string:id>/points')
 def get_points(id):
     '''
@@ -101,6 +102,7 @@ def get_points(id):
 
     return jsonify({"points": points})
 
+# route for processing receipts and giving them an id
 @app.route('/receipts/process', methods=['POST'])
 def process_receipts():
     '''
@@ -150,6 +152,7 @@ def process_receipts():
 
             # can also do comparisons against today's date to ensure the receipt is from the past
 
+        # validate purchase time
         if key == "purchaseTime":
             time_parts = receipt[key].split(":")
 
@@ -161,9 +164,68 @@ def process_receipts():
             if not time_parts[0].isdigit():
                 return jsonify({"error": "The receipt's hour is invalid"}), 400
 
+            # hours is less than 24 check:
+            if int(time_parts[0]) > 24:
+                return jsonify({"error": "The receipt's hour is invalid"}), 400
+
             # minutes is a digit check
             if not time_parts[1].isdigit():
                 return jsonify({"error": "The receipt's minute is invalid"}), 400
+
+            # minutess is less than 59 check:
+            if int(time_parts[1]) > 59:
+                return jsonify({"error": "The receipt's minute is invalid"}), 400
+
+        # validate the total
+        if key == "total":
+            total_parts = receipt[key].split(".")
+
+            # 2 parts in total check
+            if len(total_parts) != 2:
+                return jsonify({"error": "The receipt's total is invalid"}), 400
+
+            # dollars is a digit check
+            if not total_parts[0].isdigit():
+                return jsonify({"error": "The receipt's dollar total is invalid"}), 400
+
+            # cents is a digit check
+            if not total_parts[1].isdigit():
+                return jsonify({"error": "The receipt's cent total is invalid"}), 400
+
+            # cents are less than 100 check:
+            if int(total_parts[1]) > 99:
+                return jsonify({"error": "The receipt's cent total is invalid"}), 400
+
+            # cents are 2 digits check:
+            if len(total_parts[1]) != 2:
+                return jsonify({"error": "The receipt's cent total is invalid"}), 400
+
+        if key == "items":
+            for item in receipt[key]:
+                price = item["price"]
+
+                # validate the prices or each item just like with total
+                price_parts = price.split(".")
+
+                # 2 parts in price check
+                if len(price_parts) != 2:
+                    return jsonify({"error": "The receipt's item's prices is invalid"}), 400
+
+                # dollars is a digit check
+                if not price_parts[0].isdigit():
+                    return jsonify({"error": "The receipt's item's dollar price is invalid"}), 400
+
+                # cents is a digit check
+                if not price_parts[1].isdigit():
+                    return jsonify({"error": "The receipt's item's cent price is invalid"}), 400
+
+                # cents are less than 100 check:
+                if int(price_parts[1]) > 99:
+                    return jsonify({"error": "The receipt's item's cent price is invalid"}), 400
+
+                # cents are 2 digits check:
+                if len(price_parts[1]) != 2:
+                    return jsonify({"error": "The receipt's item's cent price is invalid"}), 400
 
     # generate the id for the receipt and store it in the receipts dict w/ the id as the key and the receipt as the value
     id = generate_id()
